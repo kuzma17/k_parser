@@ -42,10 +42,10 @@ class Parser extends HtmlDomParser
      * This function adapter to run the function getItem().
      */
 
-    public function adaptGetItem($url)
+    public function adaptGetItem($url, $htm)
     {
         $item_set = new WallpaperItemSet();
-        return $this->getItem($item_set, $url);
+        return $this->getItem($item_set, $url, $htm);
     }
 
     /**
@@ -126,10 +126,10 @@ class Parser extends HtmlDomParser
      *  Gets the parameters of one element.
      */
 
-    public function getItem(ItemSet $itemSet, $url)
+    public function getItem(ItemSet $itemSet, $url, $htm)
     {
-        $dom = parent::file_get_html($this->host . $url);
-        //$dom = HtmlDomParser::str_get_html($url);
+        //$dom = parent::file_get_html($this->host . $url);
+        $dom = parent::str_get_html($htm);
         $item[] = $this->host . $url;
         $item = array_merge($item, $itemSet->getItemSet($dom, $this->host));
         $dom->clear();
@@ -184,6 +184,39 @@ class Parser extends HtmlDomParser
         return $result;
     }
 
+    function parallel_map2($func, $urls) {
+        $mh = curl_multi_init();
+        $conn = [];
+        $result = [];
+
+        foreach ($urls as $i => $url) {
+            $conn[$i] = curl_init($this->host.$url);
+            curl_setopt($conn[$i], CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($conn[$i], CURLOPT_FOLLOWLOCATION, 1);
+            curl_setopt($conn[$i], CURLOPT_HEADER, 0); //
+            // curl_setopt($conn[$i], CURLOPT_CONNECTTIMEOUT, 10);
+            //  curl_setopt($conn[$i], CURLOPT_TIMEOUT, 10);
+            curl_setopt($conn[$i], CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($conn[$i], CURLOPT_SSL_VERIFYHOST, false);
+            curl_multi_add_handle($mh, $conn[$i]);
+        }
+
+        do {
+            $status = curl_multi_exec($mh, $active);
+            $info = curl_multi_info_read($mh);
+            if (false !== $info) {
+            }
+        } while ($status === CURLM_CALL_MULTI_PERFORM || $active);
+
+        foreach ($urls as $i => $url) {
+            $result[$url] = $this->$func($url, curl_multi_getcontent($conn[$i]));
+            curl_multi_remove_handle($mh, $conn[$i]);
+            curl_close($conn[$i]);
+        }
+
+        return $result;
+    }
+
     /**
      *  Writes data to the output file.
      */
@@ -194,7 +227,7 @@ class Parser extends HtmlDomParser
         $urls = array_chunk($urls, $this->portion);
         $f = fopen($this->out_file, 'a');
         foreach ($urls as $url) {
-            $items = $this->parallel_map('adaptGetItem', $url);
+            $items = $this->parallel_map2('adaptGetItem', $url);
             foreach ($items as $item) {
                 fputcsv($f, $item, $this->delimiter);
             }
