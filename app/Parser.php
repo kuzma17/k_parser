@@ -150,41 +150,7 @@ class Parser extends HtmlDomParser
      *  Runs n - quantity of threads of the process parsing.
      */
 
-    private function parallel_map($func, $items)
-    {
-        $childPids = [];
-        $result = [];
-        foreach ($items as $i => $item) {
-            $newPid = pcntl_fork();
-            if ($newPid == -1) {
-                die('Can\'t fork process');
-            } elseif ($newPid) {
-                $childPids[] = $newPid;
-                if ($i == count($items) - 1) {
-                    foreach ($childPids as $childPid) {
-                        pcntl_waitpid($childPid, $status);
-                        $sharedId = shmop_open($childPid, 'a', 0, 0);
-                        $shareData = shmop_read($sharedId, 0, shmop_size($sharedId));
-                        $result[] = unserialize($shareData);
-                        shmop_delete($sharedId);
-                        shmop_close($sharedId);
-                    }
-                }
-            } else {
-                $myPid = getmypid();
-                echo 'Start ' . $myPid . PHP_EOL;
-                $funcResult = $this->$func($item);
-                $shareData = serialize($funcResult);
-                $sharedId = shmop_open($myPid, 'c', 0644, strlen($shareData));
-                shmop_write($sharedId, $shareData, 0);
-                echo 'Done ' . $myPid . ' ' . $this->formatUsage(memory_get_peak_usage()) . PHP_EOL;
-                exit(0);
-            }
-        }
-        return $result;
-    }
-
-    function parallel_map2($func, $urls) {
+    function parallel_map($func, $urls) {
         $mh = curl_multi_init();
         $conn = [];
         $result = [];
@@ -227,7 +193,7 @@ class Parser extends HtmlDomParser
         $urls = array_chunk($urls, $this->portion);
         $f = fopen($this->out_file, 'a');
         foreach ($urls as $url) {
-            $items = $this->parallel_map2('adaptGetItem', $url);
+            $items = $this->parallel_map('adaptGetItem', $url);
             foreach ($items as $item) {
                 fputcsv($f, $item, $this->delimiter);
             }
