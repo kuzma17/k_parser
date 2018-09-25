@@ -14,6 +14,6 @@ Example, if you run from the root directory of the script<br>
 "portion" - quantity run thread.<br>
 The more the more threads and the speed of parsing.<br>
 But do not take much, as the host can ban.<br>
-Recommended to select a multiple of the quantity of elements on the page. 
+Recommended to select a multiple of the quantity of elements on the page.<br>
 'quantity_page' - quantity of pages parsed.<br>
 If 'quantity_page' => 0, will be parsed all pages.
