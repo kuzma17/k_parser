@@ -128,22 +128,12 @@ class Parser extends HtmlDomParser
 
     public function getItem(ItemSet $itemSet, $url, $htm)
     {
-        //$dom = parent::file_get_html($this->host . $url);
         $dom = parent::str_get_html($htm);
         $item[] = $this->host . $url;
         $item = array_merge($item, $itemSet->getItemSet($dom, $this->host));
         $dom->clear();
         unset($dom);
         return $item;
-    }
-
-    /**
-     * Format the output of the memory occupied by the stream.
-     */
-
-    private function formatUsage($memory)
-    {
-        return number_format($memory / 1024 / 1024, 2, '.', ' ') . ' Mb';
     }
 
     /**
@@ -159,12 +149,11 @@ class Parser extends HtmlDomParser
             $conn[$i] = curl_init($this->host.$url);
             curl_setopt($conn[$i], CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($conn[$i], CURLOPT_FOLLOWLOCATION, 1);
-            curl_setopt($conn[$i], CURLOPT_HEADER, 0); //
-            // curl_setopt($conn[$i], CURLOPT_CONNECTTIMEOUT, 10);
-            //  curl_setopt($conn[$i], CURLOPT_TIMEOUT, 10);
+            curl_setopt($conn[$i], CURLOPT_HEADER, 0);
             curl_setopt($conn[$i], CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($conn[$i], CURLOPT_SSL_VERIFYHOST, false);
             curl_multi_add_handle($mh, $conn[$i]);
+            echo 'start '.$i. PHP_EOL;
         }
 
         do {
@@ -176,6 +165,7 @@ class Parser extends HtmlDomParser
 
         foreach ($urls as $i => $url) {
             $result[$url] = $this->$func($url, curl_multi_getcontent($conn[$i]));
+            echo 'stop '.$i. PHP_EOL;
             curl_multi_remove_handle($mh, $conn[$i]);
             curl_close($conn[$i]);
         }
